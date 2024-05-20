@@ -392,7 +392,7 @@ bool RecorderImpl::initOutVideoCtx() {
                             } else {
                                 std::cout << "sws get content success" << std::endl;
                                 // Open output file
-                                int ret_avioOpen = avio_open(&m_outFmtCtx->pb,TEMP_OUT_FILE_NAME, AVIO_FLAG_WRITE);
+                                int ret_avioOpen = avio_open(&m_outFmtCtx->pb,m_outFileName.c_str(), AVIO_FLAG_WRITE);
                                 if(ret_avioOpen < 0) {
                                     std::cout << "Cannot oen output file" << std::endl;
                                     av_strerror(ret_avioOpen, err_buff, ERR_BUFF_SIZE);
