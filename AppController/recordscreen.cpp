@@ -13,27 +13,7 @@ ResizePoint::ResizePoint(RecordScreen *parent, int x, int y, ReSizeDirection dir
     m_dirt = dirt;
     rect.setTopLeft(QPoint({off_x, off_y}));
     rect.setSize(QSize({RESIZE_POINT_SIZE, RESIZE_POINT_SIZE}));
-    /*
-     * Check with ResizePoint is resizing and draw selector based on that point.
-     * How to determine which ResizePoint is being resized? Is ResizePoint the best idea?
-     * Resize Record window
-     */
-
-    /*
-     * A new enum to define location of every ResizePoint
-     * Create resizeable points:
-     * * Create resize cursor
-     *
-     * When a point is dragged, notify AreaSelector to paint new window
-     * AreaSelecto redefines selectArea based on new ResizePoint.
-     */
 }
-
-// void ResizePoint::paintEvent(QPaintEvent *event) {
-//     // Draw a rectangle
-//     QPainter painter(this);
-//     painter.fillRect(rect, QBrush(QColor(RESIZE_POINT_COLOR)));
-// }
 
 void ResizePoint::mouseMoveEvent(QMouseEvent *event) {
     if(isRectUnderMouse(event->pos())) {
@@ -50,10 +30,9 @@ bool ResizePoint::isRectUnderMouse(QPoint mountPoint) {
             && (mountPoint.y() >= off_y && mountPoint.y() <= off_y + RESIZE_POINT_SIZE));
 }
 
-
 RecordScreen::RecordScreen()
 {
-    setWindowFlags(Qt::Window | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::ToolTip);
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_TransparentForMouseEvents);
     setMouseTracking(true);
@@ -63,61 +42,71 @@ RecordScreen::RecordScreen()
     QRect  screenGeometry = screen->geometry();
     int height = screenGeometry.height();
     int width = screenGeometry.width();
+    screenHeight = height;
+    screenWidth = width;
     resize(width, height);
     m_selectArea = new QRect(QPoint({width/4, height/4}), QSize({ width/2, height/2}));
+    isRecording = false;
 
+    selectorColor = QColor(SELECTOR_DEFAULT_COLOR);
+}
 
-    // rpTopLeft->show();
+void RecordScreen::toNormalState() {
+    isRecording = false;
+    selectorColor = QColor(SELECTOR_DEFAULT_COLOR);
+    repaint();
+}
+
+void RecordScreen::toRecordState() {
+    isRecording = true;
+    selectorColor = QColor(SELECTOR_RECORD_COLOR);
+    repaint();
 }
 
 void RecordScreen::drawScreenSelector() {
     QPainter painter(this);
     QRect topSide;
     topSide.setTopLeft(m_selectArea->topLeft());
-    topSide.setWidth(m_selectArea->width());
+    topSide.setWidth(m_selectArea->width() - 1);
     topSide.setHeight(SELECTOR_BORDER_SIZE);
-    painter.fillRect(topSide, QBrush(QColor(SELECTOR_DEFAULT_COLOR)));
+    painter.fillRect(topSide, QBrush(QColor(selectorColor)));
 
     QRect bottomSide;
-    bottomSide.setTopLeft(m_selectArea->bottomLeft());
-    bottomSide.setWidth(m_selectArea->width());
+    bottomSide.setTopLeft(m_selectArea->bottomLeft()+QPoint(0, -SELECTOR_BORDER_SIZE ));
+    bottomSide.setWidth(m_selectArea->width()- 1);
     bottomSide.setHeight(SELECTOR_BORDER_SIZE);
-    painter.fillRect(bottomSide, QBrush(QColor(SELECTOR_DEFAULT_COLOR)));
+    painter.fillRect(bottomSide, QBrush(QColor(selectorColor)));
 
     QRect leftSide;
     leftSide.setTopLeft(m_selectArea->topLeft());
     leftSide.setWidth(SELECTOR_BORDER_SIZE);
-    leftSide.setHeight(m_selectArea->height());
-    painter.fillRect(leftSide, QBrush(QColor(SELECTOR_DEFAULT_COLOR)));
+    leftSide.setHeight(m_selectArea->height() - 1);
+    painter.fillRect(leftSide, QBrush(QColor(selectorColor)));
 
     QRect rightSide;
-    rightSide.setTopLeft(m_selectArea->topRight());
+    rightSide.setTopLeft(m_selectArea->topRight() + QPoint(-SELECTOR_BORDER_SIZE, 0));
     rightSide.setWidth(SELECTOR_BORDER_SIZE);
-    rightSide.setHeight(m_selectArea->height() + SELECTOR_BORDER_SIZE - 1);
-    painter.fillRect(rightSide, QBrush(QColor(SELECTOR_DEFAULT_COLOR)));
-
-    // Draw a ResizePoint and Move that point
-    // rpTopLeft->show();
-
+    rightSide.setHeight(m_selectArea->height() - 1);
+    painter.fillRect(rightSide, QBrush(QColor(selectorColor)));
 }
 
 void RecordScreen::drawResizePoint() {
     // Create Resize points
     rpTopLeft = new ResizePoint(this,
-                                m_selectArea->topLeft().x() + SELECTOR_RESIZEPOINT_PADDING,
-                                m_selectArea->topLeft().y() + SELECTOR_RESIZEPOINT_PADDING,
+                                m_selectArea->topLeft().x() + SELECTOR_RESIZEPOINT_PADDING + SELECTOR_BORDER_SIZE,
+                                m_selectArea->topLeft().y() + SELECTOR_RESIZEPOINT_PADDING + SELECTOR_BORDER_SIZE,
                                 ReSizeDirection::TOP_LEFT);
     rpTopMiddle = new ResizePoint(this,
-                                m_selectArea->topLeft().x() + m_selectArea->width()/2 + SELECTOR_RESIZEPOINT_PADDING/2,
-                                m_selectArea->topLeft().y() + SELECTOR_RESIZEPOINT_PADDING,
+                                m_selectArea->topLeft().x() +  m_selectArea->width()/2 - RESIZE_POINT_SIZE/2,
+                                m_selectArea->topLeft().y() + SELECTOR_RESIZEPOINT_PADDING + SELECTOR_BORDER_SIZE,
                                 ReSizeDirection::TOP_MIDDLE);
     rpTopRight = new ResizePoint(this,
-                                m_selectArea->topLeft().x() + m_selectArea->width() - RESIZE_POINT_SIZE - SELECTOR_RESIZEPOINT_PADDING + SELECTOR_BORDER_SIZE,
-                                m_selectArea->topLeft().y() + SELECTOR_RESIZEPOINT_PADDING,
+                                m_selectArea->topRight().x() - SELECTOR_BORDER_SIZE - SELECTOR_RESIZEPOINT_PADDING - RESIZE_POINT_SIZE,
+                                m_selectArea->topLeft().y() + SELECTOR_RESIZEPOINT_PADDING + SELECTOR_BORDER_SIZE,
                                 ReSizeDirection::TOP_RIGHT);
     rpMiddleLeft = new ResizePoint(this,
-                                m_selectArea->topLeft().x() + SELECTOR_RESIZEPOINT_PADDING,
-                                m_selectArea->topLeft().y() + m_selectArea->height()/2 + SELECTOR_RESIZEPOINT_PADDING/2,
+                                rpTopLeft->getRect().x(),
+                                m_selectArea->topLeft().y() + m_selectArea->height()/2 - RESIZE_POINT_SIZE/2,
                                 ReSizeDirection::MIDDLE_LEFT);
     rpMiddleRight = new ResizePoint(this,
                                 rpTopRight->getRect().x(),
@@ -125,7 +114,7 @@ void RecordScreen::drawResizePoint() {
                                 ReSizeDirection::MIDDLE_RIGHT);
     rpBottomLeft = new ResizePoint(this,
                                 rpTopLeft->getRect().x(),
-                                m_selectArea->topLeft().y() + m_selectArea->height() - RESIZE_POINT_SIZE - SELECTOR_RESIZEPOINT_PADDING + SELECTOR_BORDER_SIZE,
+                                m_selectArea->bottomLeft().y() - SELECTOR_BORDER_SIZE - SELECTOR_RESIZEPOINT_PADDING - RESIZE_POINT_SIZE,
                                 ReSizeDirection::BOTTOM_LEFT);
     rpBottomMiddle = new ResizePoint(this,
                                 rpTopMiddle->getRect().x(),
@@ -147,7 +136,28 @@ void RecordScreen::drawResizePoint() {
 }
 
 void RecordScreen::drawMovePoint() {
+    // Draw a cross
+    QPoint middlePoint;
+    middlePoint.setX(m_selectArea->topLeft().x() + m_selectArea->width()/2);
+    middlePoint.setY(m_selectArea->topLeft().y() + m_selectArea->height()/2);
 
+    // Create move cursor area
+    moveCursorArea.setTopLeft(QPoint(middlePoint.x() - MOVE_AREA_WIDTH/2, middlePoint.y() - MOVE_AREA_HEIGHT/2));
+    moveCursorArea.setHeight(MOVE_AREA_HEIGHT);
+    moveCursorArea.setWidth(MOVE_AREA_WIDTH);
+
+    // Draw vertical rectangle
+    QRect vRect;
+    vRect.setTopLeft(QPoint(middlePoint.x() - MOVE_CURSOR_SIZE/2, moveCursorArea.y()));
+    vRect.setWidth(MOVE_CURSOR_SIZE);
+    vRect.setHeight(MOVE_AREA_HEIGHT);
+    // Draw horizontal rectangle
+    QRect yRect;
+    yRect.setTopLeft(QPoint(moveCursorArea.x(), middlePoint.y() - MOVE_CURSOR_SIZE/2));
+    yRect.setHeight(MOVE_CURSOR_SIZE);
+    yRect.setWidth(MOVE_AREA_HEIGHT);    QPainter painter(this);
+    painter.fillRect(vRect, QBrush(QColor(MOVE_POINT_COLOR)));
+    painter.fillRect(yRect, QBrush(QColor(MOVE_POINT_COLOR)));
 
 }
 
@@ -162,6 +172,10 @@ bool RecordScreen::isResizePointUnderMouse(ResizePoint *rsPoint, QPoint mousePoi
     int rsPointY = rsPoint->getRect().y();
     int size = RESIZE_POINT_SIZE;
     return (mouseX >=  rsPointX && mouseX <= (rsPointX + size) && mouseY >= rsPointY && mouseY <= (rsPointY + RESIZE_POINT_SIZE));
+}
+
+bool RecordScreen::isMoveAreaUnderMousePoint(QPoint point) {
+    return moveCursorArea.contains(point);
 }
 
 bool RecordScreen::isResizePointUnderMouse(QPoint mousePoint) {
@@ -238,6 +252,7 @@ ResizePoint* RecordScreen::getUnderMouseResizePoint() {
 }
 
 void RecordScreen::changeCursorToResizeCursor() {
+    cursorType = CursorType::RESIZE_CURSOR;
     currentResizePoint = getUnderMouseResizePoint();
     if(currentResizePoint) {
         ReSizeDirection dirt = currentResizePoint->getDirt();
@@ -261,20 +276,19 @@ void RecordScreen::changeCursorToResizeCursor() {
 
         default:
             unsetCursor();
+            cursorType = CursorType::ARROW_CURSOR;
             break;
-
         }
 
     } else {
         unsetCursor();
+        cursorType = CursorType::ARROW_CURSOR;
     }
 }
 
 void RecordScreen::hanleResizeEvent(QMouseEvent *event) {
-    std::cout << "handle resize event" << std::endl;
     if(mouseStatus != MouseStatus::LEFT_BUTTON_PRESS || cursorType != CursorType::RESIZE_CURSOR) {
         // Cannot resize
-        std::cout << "Cannot resize" << std::endl;
         return;
 
     }
@@ -284,54 +298,49 @@ void RecordScreen::hanleResizeEvent(QMouseEvent *event) {
     int mousePosY = event->pos().y();
     switch (dirt) {
     case ReSizeDirection::TOP_LEFT:
-        if((mousePosX >= 0 && mousePosX < m_selectArea->bottomRight().x() &&
-            mousePosY >= 0 && mousePosY < m_selectArea->bottomRight().y())) {
+        if((mousePosX >= 0 && mousePosX < (m_selectArea->bottomRight().x() - SMALLEST_RECORD_SIZE) &&
+            mousePosY >= 0 && mousePosY < (m_selectArea->bottomRight().y() - SMALLEST_RECORD_SIZE))) {
             m_selectArea->setTopLeft(event->pos());
-            std::cout << "Resize to the top_left" << std::endl;
-        } else {
-            std::cout << "Cannot resize to the top_left" << std::endl;
         }
         break;
     case ReSizeDirection::TOP_MIDDLE:
-        if(mousePosY >= 0 && mousePosY < m_selectArea->bottomRight().y()) {
+        if(mousePosY >= 0 && mousePosY <( m_selectArea->bottomRight().y() - SMALLEST_RECORD_SIZE)) {
             // int oldHeight = m_selectArea->height();
             m_selectArea->setTopLeft(QPoint({m_selectArea->topLeft().x(), mousePosY}));
         }
         break;
     case ReSizeDirection::TOP_RIGHT:
-        if(mousePosX >= 0 && mousePosX > m_selectArea->bottomLeft().x() && mousePosY >= 0 && mousePosY < m_selectArea->bottomLeft().y()) {
-            // int oldTopRightX = m_selectArea->topRight().x();
-            // int oldTopRightY = m_selectArea->topRight().y();
-            // int oldHeight = m_selectArea->height();
-            // int oldWidth = m_selectArea->width();
-            // m_selectArea->setTopLeft(QPoint({m_selectArea->topLeft().x(), mousePosY}));
-            // m_selectArea->setHeight(oldHeight + (mousePosY - oldTopRightY));
-            // m_selectArea->setWidth(oldWidth + (mousePosX - oldTopRightX));
+        if(mousePosX >= 0 &&
+                mousePosX > (m_selectArea->bottomLeft().x() + SMALLEST_RECORD_SIZE) &&
+                mousePosY >= 0 &&
+                mousePosY < (m_selectArea->bottomLeft().y() - SMALLEST_RECORD_SIZE)) {
             m_selectArea->setTopRight(QPoint({mousePosX, mousePosY}));
         }
         break;
     case ReSizeDirection::MIDDLE_LEFT:
-        if(mousePosX >= 0 && mousePosX < m_selectArea->topRight().x()) {
+        if(mousePosX >= 0 && mousePosX < (m_selectArea->topRight().x() - SMALLEST_RECORD_SIZE)) {
             m_selectArea->setTopLeft(QPoint({mousePosX, m_selectArea->topLeft().y()}));
         }
         break;
     case ReSizeDirection::MIDDLE_RIGHT:
-        if(mousePosX > m_selectArea->topLeft().x()) {
+        if(mousePosX > (m_selectArea->topLeft().x() + SMALLEST_RECORD_SIZE)) {
             m_selectArea->setTopRight(QPoint({mousePosX, m_selectArea->topLeft().y()}));
         }
         break;
     case ReSizeDirection::BOTTOM_LEFT:
-        if(mousePosX < m_selectArea->topRight().x() && mousePosY > m_selectArea->topRight().y()) {
+        if(mousePosX < (m_selectArea->topRight().x() - SMALLEST_RECORD_SIZE) &&
+                mousePosY > (m_selectArea->topRight().y() + SMALLEST_RECORD_SIZE)) {
             m_selectArea->setBottomLeft(QPoint({mousePosX, mousePosY}));
         }
         break;
     case ReSizeDirection::BOTTOM_MIDDLE:
-        if(mousePosY > m_selectArea->topRight().y()) {
+        if(mousePosY > (m_selectArea->topRight().y() + SMALLEST_RECORD_SIZE)) {
             m_selectArea->setBottomLeft(QPoint({m_selectArea->topLeft().x(), mousePosY}));
         }
         break;
     case ReSizeDirection::BOTTOM_RIGHT:
-        if(mousePosX > m_selectArea->topLeft().x() && mousePosY > m_selectArea->topLeft().y()) {
+        if(mousePosX > (m_selectArea->topLeft().x() + SMALLEST_RECORD_SIZE) &&
+                mousePosY > (m_selectArea->topLeft().y() + SMALLEST_RECORD_SIZE)) {
             m_selectArea->setBottomRight(event->pos());
         }
         break;
@@ -341,11 +350,63 @@ void RecordScreen::hanleResizeEvent(QMouseEvent *event) {
     update();
 }
 
+void RecordScreen::moveToNewPos(QPoint newPos) {
+    int width = m_selectArea->width();
+    int height = m_selectArea->height();
+    m_selectArea->setTopLeft(newPos);
+    m_selectArea->setWidth(width);
+    m_selectArea->setHeight(height);
+}
+
+bool RecordScreen::isValidPosToMove(QPoint newPos) {
+    int x = newPos.x();
+    int y = newPos.y();
+
+    return (x >= 0 && y >= 0 && (x + m_selectArea->width() <= screenWidth) && (y + m_selectArea->height() <= screenHeight));
+}
+
+QPoint RecordScreen::correctMovePoint(QPoint posToMove) {
+    QPoint newPos = posToMove;
+    if(newPos.x() < 0) {
+        newPos.setX(0);
+    }
+
+    if(newPos.y() < 0) {
+        newPos.setY(0);
+    }
+
+    if(newPos.x() + m_selectArea->width() > screenWidth) {
+        newPos.setX(screenWidth - m_selectArea->width());
+    }
+
+    if(newPos.y() + m_selectArea->height() > screenHeight) {
+        newPos.setY(screenHeight -  m_selectArea->height());
+    }
+
+    return newPos;
+}
+
+void RecordScreen::handleMoveEvent(QMouseEvent *event) {
+    auto currMousePos = event->pos();
+    auto newPosToMove = QPoint(m_selectArea->topLeft() + QPoint(currMousePos - startMousePos));
+
+    moveToNewPos(correctMovePoint(newPosToMove));
+    startMousePos = currMousePos;
+    update();
+}
+
+void RecordScreen::prepareToMove() {
+    startMousePos = QCursor::pos();
+}
+
 void RecordScreen::mouseMoveEvent(QMouseEvent *event) {
     if(mouseStatus == MouseStatus::RELEASE) {
         if(isResizePointUnderMouse(event->pos())) {
             changeCursorToResizeCursor();
-            cursorType = CursorType::RESIZE_CURSOR;
+        } else if(isMoveAreaUnderMousePoint(event->pos())) {
+            // prepareToMove();
+            setCursor((Qt::SizeAllCursor));
+            cursorType = CursorType::SIZE_ALL_CURSOR;
         } else {
             unsetCursor();
             cursorType = CursorType::ARROW_CURSOR;
@@ -354,6 +415,9 @@ void RecordScreen::mouseMoveEvent(QMouseEvent *event) {
         switch (cursorType) {
         case CursorType::RESIZE_CURSOR:
             hanleResizeEvent(event);
+            break;
+        case CursorType::SIZE_ALL_CURSOR:
+            handleMoveEvent(event);
             break;
         default:
             break;
@@ -367,6 +431,9 @@ void RecordScreen::mouseMoveEvent(QMouseEvent *event) {
 void RecordScreen::mousePressEvent(QMouseEvent *event) {
     if(event->button() == Qt::LeftButton) {
         mouseStatus = MouseStatus::LEFT_BUTTON_PRESS;
+        if(cursorType == CursorType::SIZE_ALL_CURSOR) {
+            prepareToMove();
+        }
     } else if(event->button() == Qt::RightButton) {
         mouseStatus = MouseStatus::RIGHT_BUTTON_PRESS;
     } else {
@@ -380,6 +447,8 @@ void RecordScreen::mouseReleaseEvent(QMouseEvent *event) {
 
 void RecordScreen::paintEvent(QPaintEvent *event) {
     drawScreenSelector();
-    drawResizePoint();
+    if(!isRecording) {
+        drawResizePoint();
+        drawMovePoint();
+    }
 }
-

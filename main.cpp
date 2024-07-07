@@ -7,8 +7,10 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     // Create App Controller
-    Appcontroller appController;
+    // Appcontroller *appController = new Appcontroller();
 
-    // Create recorder
+    Appcontroller appController;
+    appController.show();
+
     return a.exec();
 }

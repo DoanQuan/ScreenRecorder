@@ -7,8 +7,6 @@
 #include <string>
 #include <future>
 
-#include "combaseapi.h"
-
 #include "recorderiface.h"
 
 extern "C" {
@@ -26,27 +24,30 @@ extern "C" {
 #define ERR_BUFF_SIZE           100
 #define INPUT_FORMAT_GDIGRAB    "gdigrab"
 #define DEVICE_NAME_DESKTOP     "desktop"
-#define OUT_ENCODER             AV_CODEC_ID_MPEG4
+#define OUT_VIDEO_ENCODER       AV_CODEC_ID_MPEG4
 #define MAX_NUMBER_CACHE_PKT    20
+
+#define OUT_AUDIO_ENCODER       AV_CODEC_ID_AAC
 
 #define MAX_TEST_FRAME          2000
 
 class RecorderImpl : public RecorderIface
 {
 public:
-    RecorderImpl();
+    RecorderImpl(RecordSetting settings);
     ~RecorderImpl();
     bool startRecord();
     bool stopRecord();
     bool saveRecord();
 
-    bool testRecord();
+    void applySetting(RecordSetting settings) { this->settings = settings;}
 
 private:
     char err_buff[ERR_BUFF_SIZE];
 
     bool isRecorderReady = false;
     bool isRecording = false;
+    RecordSetting settings;
 
     // For input context
     std::string     m_inputFormat;
@@ -56,6 +57,7 @@ private:
     AVCodecContext  *m_inVideoDecocedctx = nullptr;
     const AVCodec   *m_inVideoDecoder;
     int             m_inVideostreamIindex = -1;
+    int             m_outVideoStreamIndex = -1;
 
     // For output context
     std::string         m_outFileName;
@@ -64,25 +66,44 @@ private:
     AVCodecContext      *m_outVideoEncoderCtx = nullptr;
     const AVCodec       *m_outVideoEncoder;
     struct SwsContext   *swsCtx = nullptr;  // For sws scaling
+    std::mutex          m_writeOutputMutex;
 
     // Queue to save input packets
     std::queue<AVPacket*>    m_VideoPktQueue;
     std::mutex              m_VideoQueueMutex;
 
+    void createOutputFileName();
     bool initInCtx();
     bool initIniVideoCtx();
     bool readPktFromInputCtx(AVPacket* pkt);
-    bool saveReadDesktopPkt(AVPacket* pkt);
+    bool savereadDesktopVideoPkt(AVPacket* pkt);
     void captureDesktop();
     std::thread captureVideoThread;
 
     bool initOutCtx();
     bool initOutVideoCtx();
-    bool readDesktopPkt(AVPacket** pkt);
-    bool writePktToOutputCtx(AVPacket *pkt);
-    void handleCapturedData();
-    std::thread handleCapturedDataThread;
+    bool readDesktopVideoPkt(AVPacket** pkt);
+    bool writeVideoPktToOutputCtx(AVPacket *pkt);
+    void handleCapturedVideoData();
+    std::thread handleCapturedVideoDataThread;
     AVPacket* savePkt;
+
+    // For capturing audio
+    AVFormatContext *audioFmtCtx = nullptr;
+    AVAudioFifo *audioBuff;
+    int m_inAudioStreamIndex = -1;
+    int m_outAudioStreamIndex = -1;
+    bool initInAudioCtx();
+    bool initOutAudioCtx();
+    void captureAudio();
+    const AVCodec *m_inAudioDecoder;
+    AVCodecContext *m_inAudioDecoderCtx;
+    const AVCodec *m_outAudioEncoder;
+    AVCodecContext *m_outAudioEncoderCtx;
+    SwrContext *swrCtx = nullptr;
+    std::thread captureAudioThread;
+
+    bool initOutputFile();
 };
 
 #endif // FFMPEGRECORDERIMPL_H

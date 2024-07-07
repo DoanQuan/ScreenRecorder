@@ -13,12 +13,19 @@
 
 #include <iostream>
 
-#define SELECTOR_BORDER_SIZE 5
+#define SELECTOR_BORDER_SIZE 2
 #define SELECTOR_WIDTH 600
 #define SELECTOR_HEIGHT 200
-#define SELECTOR_DEFAULT_COLOR "cyan"
-#define RESIZE_POINT_COLOR  "darkCyan"
-#define SELECTOR_RESIZEPOINT_PADDING 10
+#define SELECTOR_DEFAULT_COLOR "lightgreen"
+#define SELECTOR_RECORD_COLOR "red"
+#define RESIZE_POINT_COLOR  "cyan"
+#define MOVE_POINT_COLOR "cyan"
+#define SELECTOR_RESIZEPOINT_PADDING 2
+#define SMALLEST_RECORD_SIZE 80
+#define RESIZE_POINT_SIZE 8
+#define MOVE_AREA_WIDTH 30
+#define MOVE_AREA_HEIGHT 30
+#define MOVE_CURSOR_SIZE 6
 
 class RecordScreen;
 class ResizePoint;
@@ -39,7 +46,6 @@ enum ReSizeDirection {
  */
 class ResizePoint : public QWidget
 {
-#define RESIZE_POINT_SIZE 20
 
 public:
     ResizePoint(RecordScreen *recordScreen = nullptr, int x = 0, int y = 0, ReSizeDirection dirt = ReSizeDirection::TOP_LEFT);
@@ -66,7 +72,8 @@ class RecordScreen : public QWidget
 {
     enum CursorType {
         ARROW_CURSOR = 0,
-        RESIZE_CURSOR = 1
+        RESIZE_CURSOR = 1,
+        SIZE_ALL_CURSOR
     };
 
     enum MouseStatus {
@@ -77,7 +84,11 @@ class RecordScreen : public QWidget
 
 public:
     RecordScreen();
+    ~RecordScreen() = default;
     QRect getScreenSelector(){return *m_selectArea;}
+    void toRecordState();
+    void toNormalState();
+    bool isRecordState() {return isRecording;}
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -95,7 +106,11 @@ private:
     ResizePoint *rpBottomMiddle = nullptr;
     ResizePoint *rpBottomRight = nullptr;
 
+
 private:
+    bool isRecording;
+    int screenHeight;
+    int screenWidth;
     QRect *m_selectArea;
     void drawScreenSelector();
     void drawResizePoint();
@@ -111,6 +126,17 @@ private:
     void changeCursorToResizeCursor();
     ResizePoint* getUnderMouseResizePoint();
     void hanleResizeEvent(QMouseEvent *event);
+    QColor selectorColor;
+
+    // For moving screen selector
+    QRect moveCursorArea;   // Area that can use to move the screen select area
+    bool isMoveAreaUnderMousePoint(QPoint point);
+    void prepareToMove();
+    bool isValidPosToMove(QPoint newPos);
+    void handleMoveEvent(QMouseEvent *event);
+    void moveToNewPos(QPoint newPos);
+    QPoint correctMovePoint(QPoint posToMove);
+    QPoint startMousePos;
 };
 
 #endif // RECORDSCREEN_H

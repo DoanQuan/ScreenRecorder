@@ -1,6 +1,6 @@
 QT       += core gui
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets multimedia
 
 CONFIG += c++11
 
@@ -11,16 +11,21 @@ CONFIG += c++11
 SOURCES += \
     AppController/appcontroller.cpp \
     AppController/recordscreen.cpp \
+    RecordController/audiorecorder.cpp \
     RecordController/ffmpegrecorderimpl.cpp \
     main.cpp
 
 HEADERS += \
+    AppController/RecordSetting.h \
     AppController/appcontroller.h \
     AppController/recordscreen.h \
+    RecordController/audiorecorder.h \
     RecordController/ffmpegrecorderimpl.h \
     RecordController/recorderiface.h
 
-FORMS +=
+FORMS += \
+    appcontroller.ui \
+    mainwindow.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
