@@ -1,7 +1,9 @@
 # ScreenRecorder
 
-A simple Screen Recorder using ffmpeg to hand the recording.
+A simple Screen Recorder using FFmpeg to handle the recording.
 
-![Setting Screen] (images/ScreenRecorder_Settings.png)
+![Setting Screen](https://github.com/user-attachments/assets/d6d34dcf-14b0-47c8-aff8-14cff7b679a9)
 
-![Record Screen] (images/SCreenRecoder_Record.png)
+
+![Recording Screen](https://github.com/user-attachments/assets/c27bc7eb-e0dd-46d7-a719-def82c3e7c69)
+
